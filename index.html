@@ -263,7 +263,7 @@
       );
     };
 
-    /** [블록] 표 블록 (행 동적 추가/삭제 적용) */
+    /** [블록] 표 블록 (행/열 동적 추가/삭제 적용) */
     const TableBlock = ({ data, onChange, isAdmin }) => {
       const addRow = () => {
         const newRow = { id: generateId(), cells: Array(data.headers.length).fill("") };
@@ -273,38 +273,62 @@
         onChange({...data, rows: data.rows.filter(r => r.id !== rowId)});
       };
 
+      const addColumn = () => {
+        const newHeaders = [...data.headers, `새 컬럼`];
+        const newRows = data.rows.map(row => ({
+          ...row,
+          cells: [...row.cells, ""]
+        }));
+        onChange({...data, headers: newHeaders, rows: newRows});
+      };
+
+      const removeColumn = (colIdx) => {
+        if (data.headers.length <= 1) return; // 최소 1열 유지
+        const newHeaders = data.headers.filter((_, idx) => idx !== colIdx);
+        const newRows = data.rows.map(row => ({
+          ...row,
+          cells: row.cells.filter((_, idx) => idx !== colIdx)
+        }));
+        onChange({...data, headers: newHeaders, rows: newRows});
+      };
+
       return (
         <div className="w-full overflow-x-auto relative group/feature">
           <table className="w-full text-left border-collapse min-w-[500px]">
             <thead>
               <tr className="bg-slate-50">
                 {data.headers.map((h, i) => (
-                  <th key={i} className="p-3 border-b border-slate-200">
-                    {isAdmin ? <input value={h} onChange={e => {
-                        const newH = [...data.headers];
-                        newH[i] = e.target.value;
-                        onChange({...data, headers: newH});
-                    }} className="bg-transparent w-full font-bold focus:outline-none border-b" /> : h}
+                  <th key={i} className="p-3 border-b border-slate-200 relative group/col">
+                    <div className="flex items-center gap-2 pr-6">
+                      {isAdmin ? <input value={h} onChange={e => {
+                          const newH = [...data.headers];
+                          newH[i] = e.target.value;
+                          onChange({...data, headers: newH});
+                      }} className="bg-transparent w-full font-bold focus:outline-none border-b border-transparent hover:border-slate-300 focus:border-indigo-400 transition" /> : h}
+                      {isAdmin && data.headers.length > 1 && (
+                         <button onClick={() => removeColumn(i)} className="text-red-400 hover:text-red-600 opacity-0 group-hover/col:opacity-100 transition absolute right-2 top-1/2 -translate-y-1/2 text-xs font-bold" title="이 열(가로) 삭제">✕</button>
+                      )}
+                    </div>
                   </th>
                 ))}
-                {isAdmin && <th className="w-10"></th>}
+                {isAdmin && <th className="w-10 border-b border-slate-200"></th>}
               </tr>
             </thead>
             <tbody>
               {data.rows.map((row, rIdx) => (
-                <tr key={row.id} className="border-b border-slate-100 group">
+                <tr key={row.id} className="border-b border-slate-100 group/row hover:bg-slate-50/30 transition">
                   {row.cells.map((cell, cIdx) => (
                     <td key={cIdx} className="p-3">
                       {isAdmin ? <textarea value={cell} onChange={e => {
                           const newRows = [...data.rows];
                           newRows[rIdx].cells[cIdx] = e.target.value;
                           onChange({...data, rows: newRows});
-                      }} className="w-full bg-slate-50 border border-transparent p-1 rounded focus:border-blue-300 focus:outline-none focus:bg-white resize-y min-h-[40px]" /> : cell}
+                      }} className="w-full bg-slate-50 border border-transparent p-2 rounded-lg focus:border-indigo-300 focus:outline-none focus:bg-white resize-y min-h-[40px] text-sm text-slate-700" placeholder="내용 입력..." /> : <div className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{cell}</div>}
                     </td>
                   ))}
                   {isAdmin && (
-                    <td className="p-2 text-center">
-                      <button onClick={() => removeRow(row.id)} className="text-red-400 hover:text-red-600 font-bold opacity-0 group-hover:opacity-100">✕</button>
+                    <td className="p-2 text-center align-middle">
+                      <button onClick={() => removeRow(row.id)} className="text-red-400 hover:text-red-600 font-bold opacity-0 group-hover/row:opacity-100 transition" title="이 행(세로) 삭제">✕</button>
                     </td>
                   )}
                 </tr>
@@ -312,9 +336,14 @@
             </tbody>
           </table>
           {isAdmin && (
-             <button onClick={addRow} className="mt-3 py-2 px-4 border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50 transition text-sm font-bold flex items-center gap-1">
-               ＋ 행 추가
-             </button>
+             <div className="flex gap-2 mt-4">
+               <button onClick={addRow} className="py-2 px-4 border border-dashed border-slate-300 rounded-lg text-slate-500 hover:bg-slate-50 hover:text-indigo-600 transition text-sm font-bold flex items-center gap-1">
+                 ＋ 행(세로 줄) 추가
+               </button>
+               <button onClick={addColumn} className="py-2 px-4 border border-dashed border-slate-300 rounded-lg text-slate-500 hover:bg-slate-50 hover:text-indigo-600 transition text-sm font-bold flex items-center gap-1">
+                 ＋ 열(가로 줄) 추가
+               </button>
+             </div>
           )}
         </div>
       );
