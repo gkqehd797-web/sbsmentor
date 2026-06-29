@@ -560,6 +560,13 @@
                         {block.type === 'checklist' && <ChecklistBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
                         {block.type === 'cabinet' && <CardGridBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
                         {block.type === 'table' && <TableBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
+                        {block.type === 'step' && <StepBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
+                        {block.type === 'infoBox' && <InfoBoxBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
+                        {block.type === 'warningBox' && <WarningBoxBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
+                        {block.type === 'flowchart' && <FlowchartBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
+                        {block.type === 'photo' && <PhotoBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
+                        {block.type === 'divider' && <DividerBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
+                        {block.type === 'keyValueBox' && <KeyValueBoxBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
                       </BlockContainer>
                     ))}
                   </div>
