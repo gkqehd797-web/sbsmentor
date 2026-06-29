@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>사업부 인포 업무 가이드북</title>
+  
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    body { font-family: 'Pretendard', -apple-system, sans-serif; background-color: #f8fafc; }
+    .fade-in { animation: fadeIn 0.3s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    .rich-text-content ul { list-style-type: disc; padding-left: 1.5rem; }
+    .rich-text-content ol { list-style-type: decimal; padding-left: 1.5rem; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // 고유 ID 생성 유틸리티 함수
+    const generateId = () => '_' + Math.random().toString(36).substr(2, 9);
+
+    // 기본 템플릿 데이터 (처음 시작 시)
+    const initialData = {
+      lastUpdated: new Date().toISOString(),
+      sections: [
+        {
+          id: generateId(),
+          title: "안내 섹션",
+          blocks: [
+            {
+              id: generateId(),
+              type: "text",
+              content: "<b>가이드북에 오신 것을 환영합니다.</b><br/>관리자 모드를 켜서 블록을 추가하거나 수정해보세요."
+            }
+          ]
+        }
+      ]
+    };
+
+    /**
+     * [컴포넌트] RichTextEditor: 텍스트 서식 편집기
+     * 텍스트를 작성하고 굵게, 기울임 등의 서식을 적용합니다.
+     */
+    const RichTextEditor = ({ value, onChange, readOnly }) => {
+      if (readOnly) {
+        return <div dangerouslySetInnerHTML={{ __html: value }} className="rich-text-content text-slate-700 leading-relaxed whitespace-pre-wrap" />;
+      }
+      return (
+        <div className="border border-blue-200 rounded-lg overflow-hidden bg-white shadow-sm focus-within:border-blue-500">
+          <div className="bg-slate-50 p-1 flex flex-wrap gap-1 border-b border-blue-100">
+            <button type="button" onMouseDown={e => { e.preventDefault(); document.execCommand('bold'); }} className="px-2 py-1 bg-white border rounded text-sm hover:bg-slate-100 font-bold">B</button>
+            <button type="button" onMouseDown={e => { e.preventDefault(); document.execCommand('italic'); }} className="px-2 py-1 bg-white border rounded text-sm hover:bg-slate-100 italic">I</button>
+            <button type="button" onMouseDown={e => { e.preventDefault(); document.execCommand('underline'); }} className="px-2 py-1 bg-white border rounded text-sm hover:bg-slate-100 underline">U</button>
+            <button type="button" onMouseDown={e => { e.preventDefault(); document.execCommand('insertUnorderedList'); }} className="px-2 py-1 bg-white border rounded text-sm hover:bg-slate-100">• List</button>
+          </div>
+          <div contentEditable={true} onBlur={e => onChange(e.currentTarget.innerHTML)} dangerouslySetInnerHTML={{ __html: value }} className="p-3 min-h-[60px] focus:outline-none rich-text-content" />
+        </div>
+      );
+    };
+
+    /**
+     * [컴포넌트] 블록 단위 제어 컨테이너
+     * 관리자 모드일 경우 삭제(✕) 버튼과 이동 버튼을 제공하여 블록을 제어합니다.
+     */
+    const BlockContainer = ({ children, isAdmin, onDelete }) => (
+      <div className="relative group mb-6 fade-in border border-transparent hover:border-slate-200 rounded-xl transition-colors p-2 -mx-2">
+        {isAdmin && (
+          <button onClick={onDelete} className="absolute -right-2 -top-2 w-8 h-8 bg-red-50 text-red-500 rounded-full opacity-0 group-hover:opacity-100 shadow flex items-center justify-center hover:bg-red-500 hover:text-white transition z-10" title="블록 삭제">✕</button>
+        )}
+        {children}
+      </div>
+    );
+
+    /** [블록] 텍스트 블록 */
+    const TextBlock = ({ data, onChange, isAdmin }) => (
+      <RichTextEditor value={data.content} onChange={val => onChange({...data, content: val})} readOnly={!isAdmin} />
+    );
+
+    /** [블록] 체크리스트 블록 (항목 동적 추가/삭제 적용) */
+    const ChecklistBlock = ({ data, onChange, isAdmin }) => {
+      const handleCheck = (itemId) => {
+        if (isAdmin) return;
+        const newItems = data.items.map(i => i.id === itemId ? {...i, checked: !i.checked} : i);
+        onChange({...data, items: newItems});
+      };
+      
+      const handleReset = () => {
+        const newItems = data.items.map(i => ({...i, checked: false}));
+        onChange({...data, items: newItems});
+      };
+
+      const addItem = () => {
+        onChange({...data, items: [...data.items, { id: generateId(), text: "새 체크 항목", checked: false }]});
+      };
+
+      const removeItem = (itemId) => {
+        onChange({...data, items: data.items.filter(i => i.id !== itemId)});
+      };
+
+      const progress = data.items.length ? Math.round((data.items.filter(i => i.checked).length / data.items.length) * 100) : 0;
+
+      return (
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+          <div className="flex justify-between items-end mb-4">
+            {isAdmin ? (
+               <input value={data.title || ""} onChange={e => onChange({...data, title: e.target.value})} className="text-xl font-bold border-b focus:outline-none w-2/3" placeholder="체크리스트 제목" />
+            ) : (
+               <h3 className="text-xl font-bold text-slate-800">{data.title}</h3>
+            )}
+            {!isAdmin && <button onClick={handleReset} className="text-sm text-slate-500 hover:text-blue-600 transition">↺ 전체 해제</button>}
+          </div>
+          <div className="w-full bg-slate-100 rounded-full h-2 mb-6 overflow-hidden">
+            <div className="bg-blue-500 h-2 rounded-full transition-all duration-500" style={{ width: `${progress}%` }}></div>
+          </div>
+          <div className="space-y-3">
+            {data.items.map((item, idx) => (
+              <div key={item.id} className="flex items-center gap-3">
+                <input type="checkbox" checked={item.checked} onChange={() => handleCheck(item.id)} disabled={isAdmin} className="w-5 h-5 text-blue-500 bg-slate-100 border-slate-300 rounded cursor-pointer" />
+                {isAdmin ? (
+                  <>
+                    <input type="text" value={item.text} onChange={e => {
+                      const newItems = [...data.items];
+                      newItems[idx].text = e.target.value;
+                      onChange({...data, items: newItems});
+                    }} className="flex-1 border-b border-slate-200 p-1 focus:outline-none" />
+                    <button onClick={() => removeItem(item.id)} className="text-red-400 hover:text-red-600 font-bold px-2">✕</button>
+                  </>
+                ) : (
+                  <span className={`text-lg ${item.checked ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{item.text}</span>
+                )}
+              </div>
+            ))}
+          </div>
+          {isAdmin && (
+             <button onClick={addItem} className="mt-4 w-full py-2 border-2 border-dashed border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50 transition flex items-center justify-center gap-2 text-sm font-bold">
+               ＋ 체크 항목 추가
+             </button>
+          )}
+        </div>
+      );
+    };
+
+    /** [블록] 카드 그리드 블록 (캐비닛 등, 항목 동적 추가/삭제 적용) */
+    const CardGridBlock = ({ data, onChange, isAdmin }) => {
+      const addCard = () => {
+        onChange({...data, items: [...data.items, { id: generateId(), title: "새 카드", content: "내용을 입력하세요" }]});
+      };
+      const removeCard = (itemId) => {
+        onChange({...data, items: data.items.filter(i => i.id !== itemId)});
+      };
+
+      return (
+        <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
+           {isAdmin ? (
+              <input value={data.title || ""} onChange={e => onChange({...data, title: e.target.value})} className="text-xl font-bold border-b mb-4 focus:outline-none bg-transparent w-full" placeholder="카드 그룹 제목" />
+           ) : (
+              data.title && <h3 className="text-xl font-bold text-slate-800 mb-4">{data.title}</h3>
+           )}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {data.items.map((item, idx) => (
+              <div key={item.id} className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm relative group">
+                {isAdmin && <button onClick={() => removeCard(item.id)} className="absolute right-2 top-2 text-red-300 hover:text-red-500 font-bold opacity-0 group-hover:opacity-100 transition">✕</button>}
+                {isAdmin ? (
+                  <>
+                    <input type="text" value={item.title} onChange={e => {
+                      const newItems = [...data.items];
+                      newItems[idx].title = e.target.value;
+                      onChange({...data, items: newItems});
+                    }} className="font-bold text-lg w-full border-b mb-2 focus:outline-none" />
+                    <RichTextEditor value={item.content} onChange={val => {
+                      const newItems = [...data.items];
+                      newItems[idx].content = val;
+                      onChange({...data, items: newItems});
+                    }} readOnly={false} />
+                  </>
+                ) : (
+                  <>
+                    <h4 className="font-bold text-lg mb-2">{item.title}</h4>
+                    <RichTextEditor value={item.content} readOnly={true} />
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+          {isAdmin && (
+             <button onClick={addCard} className="mt-4 w-full py-3 border-2 border-dashed border-indigo-200 rounded-xl text-indigo-500 hover:bg-indigo-50 transition flex items-center justify-center font-bold">
+               ＋ 카드 추가
+             </button>
+          )}
+        </div>
+      );
+    };
+
+    /** [블록] 표 블록 (행 동적 추가/삭제 적용) */
+    const TableBlock = ({ data, onChange, isAdmin }) => {
+      const addRow = () => {
+        const newRow = { id: generateId(), cells: Array(data.headers.length).fill("") };
+        onChange({...data, rows: [...data.rows, newRow]});
+      };
+      const removeRow = (rowId) => {
+        onChange({...data, rows: data.rows.filter(r => r.id !== rowId)});
+      };
+
+      return (
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[500px]">
+            <thead>
+              <tr className="bg-slate-50">
+                {data.headers.map((h, i) => (
+                  <th key={i} className="p-3 border-b border-slate-200">
+                    {isAdmin ? <input value={h} onChange={e => {
+                        const newH = [...data.headers];
+                        newH[i] = e.target.value;
+                        onChange({...data, headers: newH});
+                    }} className="bg-transparent w-full font-bold focus:outline-none border-b" /> : h}
+                  </th>
+                ))}
+                {isAdmin && <th className="w-10"></th>}
+              </tr>
+            </thead>
+            <tbody>
+              {data.rows.map((row, rIdx) => (
+                <tr key={row.id} className="border-b border-slate-100 group">
+                  {row.cells.map((cell, cIdx) => (
+                    <td key={cIdx} className="p-3">
+                      {isAdmin ? <textarea value={cell} onChange={e => {
+                          const newRows = [...data.rows];
+                          newRows[rIdx].cells[cIdx] = e.target.value;
+                          onChange({...data, rows: newRows});
+                      }} className="w-full bg-slate-50 border border-transparent p-1 rounded focus:border-blue-300 focus:outline-none focus:bg-white resize-y min-h-[40px]" /> : cell}
+                    </td>
+                  ))}
+                  {isAdmin && (
+                    <td className="p-2 text-center">
+                      <button onClick={() => removeRow(row.id)} className="text-red-400 hover:text-red-600 font-bold opacity-0 group-hover:opacity-100">✕</button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {isAdmin && (
+             <button onClick={addRow} className="mt-3 py-2 px-4 border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50 transition text-sm font-bold flex items-center gap-1">
+               ＋ 행 추가
+             </button>
+          )}
+        </div>
+      );
+    };
+
+    /**
+     * 메인 애플리케이션 컴포넌트
+     */
+    const App = () => {
+      const [isAdmin, setIsAdmin] = useState(false);
+      const [showLogin, setShowLogin] = useState(false);
+      const [password, setPassword] = useState('');
+      
+      const [data, setData] = useState(() => {
+        try {
+          const saved = localStorage.getItem('closeInpoDataV2');
+          return saved ? JSON.parse(saved) : initialData;
+        } catch (e) { return initialData; }
+      });
+
+      useEffect(() => {
+        try { localStorage.setItem('closeInpoDataV2', JSON.stringify(data)); } catch (e) {}
+      }, [data]);
+
+      const handleLogin = (e) => {
+        e.preventDefault();
+        if (password === '1111') {
+          setIsAdmin(true); setShowLogin(false); setPassword('');
+        } else {
+          alert('비밀번호 불일치'); setPassword('');
+        }
+      };
+
+      // 전체 섹션 제어 함수
+      const addSection = () => {
+        setData({...data, sections: [...data.sections, { id: generateId(), title: "새 섹션", blocks: [] }]});
+      };
+      const updateSection = (secId, newTitle) => {
+        setData({...data, sections: data.sections.map(s => s.id === secId ? {...s, title: newTitle} : s)});
+      };
+      const removeSection = (secId) => {
+        if(!confirm("이 섹션과 내부의 모든 내용을 삭제하시겠습니까?")) return;
+        setData({...data, sections: data.sections.filter(s => s.id !== secId)});
+      };
+
+      // 블록 제어 함수
+      const addBlock = (secId, type) => {
+        let newBlock = { id: generateId(), type };
+        if(type === 'text') newBlock.content = "여기에 텍스트를 입력하세요.";
+        if(type === 'checklist') newBlock = { ...newBlock, title: "새 체크리스트", items: [{id: generateId(), text: "항목 1", checked: false}] };
+        if(type === 'cabinet') newBlock = { ...newBlock, title: "새 카드 그리드", items: [{id: generateId(), title: "제목", content: "내용"}] };
+        if(type === 'table') newBlock = { ...newBlock, headers: ["컬럼1", "컬럼2"], rows: [{id: generateId(), cells: ["",""]}] };
+
+        setData({
+          ...data, 
+          sections: data.sections.map(s => s.id === secId ? {...s, blocks: [...(s.blocks||[]), newBlock]} : s)
+        });
+      };
+
+      const updateBlock = (secId, blockId, newData) => {
+        setData({
+          ...data,
+          sections: data.sections.map(s => s.id === secId ? {...s, blocks: s.blocks.map(b => b.id === blockId ? newData : b)} : s)
+        });
+      };
+
+      const removeBlock = (secId, blockId) => {
+        setData({
+          ...data,
+          sections: data.sections.map(s => s.id === secId ? {...s, blocks: s.blocks.filter(b => b.id !== blockId)} : s)
+        });
+      };
+
+      // 블록 추가 모달 상태 관리
+      const [addingToSec, setAddingToSec] = useState(null);
+
+      return (
+        <div className="min-h-screen flex flex-col md:flex-row text-slate-800">
+          {/* 사이드바 목차 */}
+          <aside className="w-full md:w-64 bg-slate-900 text-white p-5 flex flex-col sticky top-0 md:h-screen overflow-y-auto z-20">
+            <h2 className="text-xl font-black mb-6 tracking-wide text-blue-400">INFO GUIDE</h2>
+            <nav className="flex-1 space-y-1">
+              {data.sections.map(s => (
+                <div key={s.id} className="group relative flex items-center justify-between px-3 py-2 rounded text-slate-300 hover:bg-slate-800 hover:text-white transition font-medium">
+                   <a href={`#${s.id}`} className="truncate block flex-1">{s.title.replace(/<[^>]+>/g, '') || "제목 없음"}</a>
+                   {isAdmin && <button onClick={() => removeSection(s.id)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-500 ml-2 font-bold px-1">✕</button>}
+                </div>
+              ))}
+              {isAdmin && (
+                <button onClick={addSection} className="mt-4 w-full py-2 bg-slate-800 hover:bg-slate-700 rounded text-sm text-slate-300 font-bold flex items-center justify-center transition">
+                  ＋ 목차 항목 추가
+                </button>
+              )}
+            </nav>
+          </aside>
+
+          {/* 메인 콘텐츠 영역 */}
+          <main className="flex-1 p-6 md:p-12 overflow-y-auto">
+            <div className="max-w-4xl mx-auto">
+              {/* 상단 툴바 및 모드 전환 */}
+              <div className="flex justify-between items-center mb-10 pb-6 border-b border-slate-200">
+                <h1 className="text-3xl font-extrabold text-slate-900">가이드북</h1>
+                <label className="flex items-center cursor-pointer relative bg-white p-2 rounded-xl shadow-sm border border-slate-100">
+                  <input type="checkbox" checked={isAdmin} onChange={(e) => e.target.checked ? setShowLogin(true) : setIsAdmin(false)} className="sr-only" />
+                  <div className={`w-14 h-7 rounded-full transition-colors duration-300 shadow-inner ${isAdmin ? 'bg-indigo-600' : 'bg-slate-300'}`}></div>
+                  <div className={`absolute w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 top-3 left-3 ${isAdmin ? 'translate-x-7' : ''}`}></div>
+                  <span className="ml-3 font-bold text-sm text-slate-600 pr-2">편집 모드</span>
+                </label>
+              </div>
+
+              {/* 동적 섹션 및 블록 렌더링 */}
+              {data.sections.map(section => (
+                <section key={section.id} id={section.id} className="mb-16 scroll-mt-24">
+                  {/* 섹션 제목 (수정 가능) */}
+                  <div className="mb-6 flex items-center group">
+                    {isAdmin ? (
+                      <input value={section.title} onChange={e => updateSection(section.id, e.target.value)} className="text-2xl font-bold text-indigo-900 bg-transparent border-b-2 border-indigo-200 focus:border-indigo-500 outline-none w-full pb-1" placeholder="섹션 제목 입력" />
+                    ) : (
+                      <h2 className="text-2xl font-bold text-slate-800 border-l-4 border-indigo-500 pl-3">{section.title}</h2>
+                    )}
+                  </div>
+
+                  {/* 블록 리스트 렌더링 */}
+                  <div className="space-y-4">
+                    {(section.blocks || []).map(block => (
+                      <BlockContainer key={block.id} isAdmin={isAdmin} onDelete={() => removeBlock(section.id, block.id)}>
+                        {block.type === 'text' && <TextBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
+                        {block.type === 'checklist' && <ChecklistBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
+                        {block.type === 'cabinet' && <CardGridBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
+                        {block.type === 'table' && <TableBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
+                      </BlockContainer>
+                    ))}
+                  </div>
+
+                  {/* 블록 추가 트리거 */}
+                  {isAdmin && (
+                    <div className="mt-4 text-center">
+                       <button onClick={() => setAddingToSec(section.id)} className="py-2 px-6 bg-white border border-slate-200 text-slate-500 rounded-full shadow-sm hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition font-bold text-sm">
+                         ＋ 블록 추가
+                       </button>
+                    </div>
+                  )}
+                </section>
+              ))}
+
+              {isAdmin && (
+                <div className="mt-12 pt-8 border-t border-slate-200 text-center">
+                  <button onClick={addSection} className="py-4 px-8 bg-slate-100 text-slate-600 rounded-xl font-extrabold hover:bg-slate-200 transition text-lg w-full max-w-md shadow-sm">
+                    ＋ 새 섹션 추가
+                  </button>
+                </div>
+              )}
+            </div>
+          </main>
+
+          {/* 블록 유형 선택 모달 */}
+          {addingToSec && (
+            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setAddingToSec(null)}>
+              <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm fade-in" onClick={e => e.stopPropagation()}>
+                <h3 className="text-lg font-bold mb-4 text-center border-b pb-3">추가할 항목 선택</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <button onClick={() => { addBlock(addingToSec, 'text'); setAddingToSec(null); }} className="p-4 border rounded-xl hover:bg-slate-50 hover:border-indigo-300 flex flex-col items-center gap-2 transition"><span className="text-2xl">📝</span><span className="text-sm font-bold">텍스트</span></button>
+                  <button onClick={() => { addBlock(addingToSec, 'checklist'); setAddingToSec(null); }} className="p-4 border rounded-xl hover:bg-slate-50 hover:border-indigo-300 flex flex-col items-center gap-2 transition"><span className="text-2xl">✅</span><span className="text-sm font-bold">체크 항목</span></button>
+                  <button onClick={() => { addBlock(addingToSec, 'cabinet'); setAddingToSec(null); }} className="p-4 border rounded-xl hover:bg-slate-50 hover:border-indigo-300 flex flex-col items-center gap-2 transition"><span className="text-2xl">🗂️</span><span className="text-sm font-bold">카드 그리드</span></button>
+                  <button onClick={() => { addBlock(addingToSec, 'table'); setAddingToSec(null); }} className="p-4 border rounded-xl hover:bg-slate-50 hover:border-indigo-300 flex flex-col items-center gap-2 transition"><span className="text-2xl">📊</span><span className="text-sm font-bold">표 (Table)</span></button>
+                </div>
+                <button onClick={() => setAddingToSec(null)} className="mt-6 w-full py-3 bg-slate-100 rounded-lg font-bold text-slate-600 hover:bg-slate-200">취소</button>
+              </div>
+            </div>
+          )}
+
+          {/* 로그인 모달 */}
+          {showLogin && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
+              <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-sm fade-in">
+                <h2 className="text-2xl font-black mb-6 text-center text-slate-800">관리자 보안 접속</h2>
+                <form onSubmit={handleLogin}>
+                  <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="비밀번호" className="w-full border-2 border-slate-200 p-4 rounded-xl mb-6 focus:border-indigo-500 outline-none text-center text-xl tracking-widest font-bold" autoFocus />
+                  <div className="flex gap-3">
+                    <button type="button" onClick={() => setShowLogin(false)} className="flex-1 py-4 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200">취소</button>
+                    <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200">확인</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
