@@ -146,7 +146,7 @@
       const progress = data.items.length ? Math.round((data.items.filter(i => i.checked).length / data.items.length) * 100) : 0;
 
       return (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+        <div className="w-full relative group/feature">
           <div className="flex justify-between items-end mb-4">
             {isAdmin ? (
                <input value={data.title || ""} onChange={e => onChange({...data, title: e.target.value})} className="text-xl font-bold border-b focus:outline-none w-2/3" placeholder="체크리스트 제목" />
@@ -196,7 +196,7 @@
       };
 
       return (
-        <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
+        <div className="w-full relative group/feature">
            {isAdmin ? (
               <input value={data.title || ""} onChange={e => onChange({...data, title: e.target.value})} className="text-xl font-bold border-b mb-4 focus:outline-none bg-transparent w-full" placeholder="카드 그룹 제목" />
            ) : (
@@ -248,7 +248,7 @@
       };
 
       return (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
+        <div className="w-full overflow-x-auto relative group/feature">
           <table className="w-full text-left border-collapse min-w-[500px]">
             <thead>
               <tr className="bg-slate-50">
@@ -299,7 +299,7 @@
       const addItem = () => onChange({...data, items: [...data.items, { id: generateId(), title: "새로운 단계", content: "설명을 입력하세요." }]});
       const removeItem = (id) => onChange({...data, items: data.items.filter(i => i.id !== id)});
       return (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+        <div className="w-full relative group/feature">
           <div className="space-y-4 relative before:absolute before:inset-0 before:ml-[28px] before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-slate-200">
             {data.items.map((item, idx) => (
               <div key={item.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
@@ -361,7 +361,7 @@
       const addItem = () => onChange({...data, items: [...data.items, { id: generateId(), text: "새 단계" }]});
       const removeItem = (id) => onChange({...data, items: data.items.filter(i => i.id !== id)});
       return (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
+        <div className="w-full overflow-x-auto relative group/feature">
           <div className="flex items-center gap-2 min-w-max">
             {data.items.map((item, idx) => (
               <React.Fragment key={item.id}>
@@ -380,7 +380,7 @@
       );
     };
 
-    /** [블록] 사진 칸 */
+        /** [블록] 사진 칸 */
     const PhotoBlock = ({ data, onChange, isAdmin }) => {
       const handleUpload = (e) => {
         const file = e.target.files[0];
@@ -389,6 +389,44 @@
         reader.onload = (event) => onChange({...data, imageUrl: event.target.result});
         reader.readAsDataURL(file);
       };
+      return (
+        <div className="w-full flex flex-col group/photo relative group/feature">
+          {data.imageUrl ? (
+            <div className="relative rounded-xl overflow-hidden bg-slate-50">
+              <img src={data.imageUrl} alt="uploaded" className="w-full h-auto object-contain max-h-[600px]" />
+              {isAdmin && (
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                  <label className="bg-white text-slate-800 px-6 py-3 rounded-xl font-bold cursor-pointer hover:bg-slate-100 shadow-lg">
+                    이미지 변경
+                    <input type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+                  </label>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="w-full h-64 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center hover:bg-slate-100 transition">
+              {isAdmin ? (
+                <label className="text-slate-500 hover:text-indigo-600 font-bold cursor-pointer flex flex-col items-center gap-3 w-full h-full justify-center">
+                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm text-3xl">📷</div>
+                  <span>클릭하여 이미지 업로드</span>
+                  <input type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+                </label>
+              ) : (
+                <div className="text-slate-400 flex flex-col items-center gap-2">
+                  <span className="text-3xl grayscale opacity-50">📷</span>
+                  <span>등록된 이미지가 없습니다</span>
+                </div>
+              )}
+            </div>
+          )}
+          {isAdmin ? (
+            <input type="text" value={data.description || ""} onChange={e => onChange({...data, description: e.target.value})} placeholder="사진 설명을 입력하세요 (빈 칸이면 표시되지 않음)" className="w-full mt-2 p-2 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none text-center text-sm font-medium text-slate-600 transition" />
+          ) : (
+            data.description && <div className="mt-3 text-center text-sm font-medium text-slate-600">{data.description}</div>
+          )}
+        </div>
+      );
+    };
       return (
         <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-3">
           {data.imageUrl ? (
@@ -442,7 +480,7 @@
       const addItem = () => onChange({...data, items: [...data.items, { id: generateId(), label: "항목명", value: "내용을 입력하세요" }]});
       const removeItem = (id) => onChange({...data, items: data.items.filter(i => i.id !== id)});
       return (
-        <div className="bg-slate-50 border border-slate-200 p-6 rounded-2xl shadow-sm">
+        <div className="w-full bg-slate-50 border border-slate-200 p-4 rounded-xl relative group/feature">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {data.items.map((item, idx) => (
               <div key={item.id} className="relative group flex items-center bg-white border border-slate-200 p-4 rounded-xl shadow-sm hover:border-blue-300 transition-colors">
@@ -472,7 +510,16 @@
       const [data, setData] = useState(() => {
         try {
           const saved = localStorage.getItem('closeInpoDataV2');
-          return saved ? JSON.parse(saved) : initialData;
+          let parsed = saved ? JSON.parse(saved) : initialData;
+          // Migration to Cell System (Nested features)
+          parsed.sections = parsed.sections.map(s => ({
+            ...s,
+            blocks: (s.blocks || []).map(b => {
+              if (b.type === 'cell') return b;
+              return { id: b.id || generateId(), type: 'cell', width: b.width || '100%', items: [b] };
+            })
+          }));
+          return parsed;
         } catch (e) { return initialData; }
       });
 
@@ -501,70 +548,142 @@
         setData({...data, sections: data.sections.filter(s => s.id !== secId)});
       };
 
-      // 블록 제어 함수
-      const addBlock = (secId, type, insertAfterId = null) => {
-        let newBlock = { id: generateId(), type };
-        if(type === 'text') newBlock.content = "여기에 텍스트를 입력하세요.";
-        if(type === 'checklist') newBlock = { ...newBlock, title: "새 체크리스트", items: [{id: generateId(), text: "항목 1", checked: false}] };
-        if(type === 'cabinet') newBlock = { ...newBlock, title: "새 카드 그리드", items: [{id: generateId(), title: "제목", content: "내용"}] };
-        if(type === 'table') newBlock = { ...newBlock, headers: ["컬럼1", "컬럼2"], rows: [{id: generateId(), cells: ["",""]}] };
-        if(type === 'step') newBlock = { ...newBlock, items: [{id: generateId(), title: "단계 1", content: "내용을 입력하세요."}] };
-        if(type === 'infoBox') newBlock = { ...newBlock, content: "안내 메시지를 입력하세요." };
-        if(type === 'warningBox') newBlock = { ...newBlock, content: "주의 메시지를 입력하세요." };
-        if(type === 'flowchart') newBlock = { ...newBlock, items: [{id: generateId(), text: "시작"}, {id: generateId(), text: "진행"}] };
-        if(type === 'photo') newBlock = { ...newBlock, imageUrl: "" };
-        if(type === 'keyValueBox') newBlock = { ...newBlock, items: [{id: generateId(), label: "항목명", value: "내용"}] };
+            // 셀(칸) 및 기능 제어 함수
+      const addFeature = (secId, type, targetCellId = null) => {
+        let newFeature = { id: generateId(), type };
+        if(type === 'text') newFeature.content = "여기에 텍스트를 입력하세요.";
+        if(type === 'checklist') newFeature = { ...newFeature, title: "새 체크리스트", items: [{id: generateId(), text: "항목 1", checked: false}] };
+        if(type === 'cabinet') newFeature = { ...newFeature, title: "새 카드 그리드", items: [{id: generateId(), title: "제목", content: "내용"}] };
+        if(type === 'table') newFeature = { ...newFeature, headers: ["컬럼1", "컬럼2"], rows: [{id: generateId(), cells: ["",""]}] };
+        if(type === 'step') newFeature = { ...newFeature, items: [{id: generateId(), title: "단계 1", content: "내용을 입력하세요."}] };
+        if(type === 'infoBox') newFeature = { ...newFeature, content: "안내 메시지를 입력하세요." };
+        if(type === 'warningBox') newFeature = { ...newFeature, content: "주의 메시지를 입력하세요." };
+        if(type === 'flowchart') newFeature = { ...newFeature, items: [{id: generateId(), text: "시작"}, {id: generateId(), text: "진행"}] };
+        if(type === 'photo') newFeature = { ...newFeature, imageUrl: "" };
+        if(type === 'keyValueBox') newFeature = { ...newFeature, items: [{id: generateId(), label: "항목명", value: "내용"}] };
 
-        setData({
-          ...data, 
-          sections: data.sections.map(s => {
+        setData(prev => ({
+          ...prev, 
+          sections: prev.sections.map(s => {
             if (s.id !== secId) return s;
             const newBlocks = [...(s.blocks || [])];
-            if (insertAfterId) {
-              const idx = newBlocks.findIndex(b => b.id === insertAfterId);
-              if (idx >= 0) {
-                newBlocks.splice(idx + 1, 0, newBlock);
+            if (targetCellId) {
+              // 기존 칸(Cell) 내부에 기능 추가
+              const cellIdx = newBlocks.findIndex(b => b.id === targetCellId);
+              if (cellIdx >= 0) {
+                newBlocks[cellIdx] = { ...newBlocks[cellIdx], items: [...newBlocks[cellIdx].items, newFeature] };
                 return { ...s, blocks: newBlocks };
               }
             }
-            newBlocks.push(newBlock);
+            // 새로운 칸(Cell) 생성 후 하단 추가
+            newBlocks.push({ id: generateId(), type: 'cell', width: '100%', items: [newFeature] });
             return { ...s, blocks: newBlocks };
           })
-        });
+        }));
       };
 
-      const updateBlock = (secId, blockId, newData) => {
-        setData({
-          ...data,
-          sections: data.sections.map(s => s.id === secId ? {...s, blocks: s.blocks.map(b => b.id === blockId ? newData : b)} : s)
-        });
+      const updateCell = (secId, cellId, newData) => {
+        setData(prev => ({
+          ...prev,
+          sections: prev.sections.map(s => s.id === secId ? {...s, blocks: s.blocks.map(b => b.id === cellId ? newData : b)} : s)
+        }));
       };
 
-      const removeBlock = (secId, blockId) => {
-        setData({
-          ...data,
-          sections: data.sections.map(s => s.id === secId ? {...s, blocks: s.blocks.filter(b => b.id !== blockId)} : s)
-        });
+      const removeCell = (secId, cellId) => {
+        setData(prev => ({
+          ...prev,
+          sections: prev.sections.map(s => s.id === secId ? {...s, blocks: s.blocks.filter(b => b.id !== cellId)} : s)
+        }));
       };
 
-      const dropBlock = (secId, draggedBlockId, targetBlockId) => {
-        setData({
-          ...data,
-          sections: data.sections.map(s => {
+      const updateFeatureData = (secId, cellId, featureId, newData) => {
+        setData(prev => ({
+          ...prev,
+          sections: prev.sections.map(s => {
             if (s.id !== secId) return s;
-            const newBlocks = [...(s.blocks||[])];
-            const draggedIdx = newBlocks.findIndex(b => b.id === draggedBlockId);
-            const targetIdx = newBlocks.findIndex(b => b.id === targetBlockId);
+            return {
+              ...s,
+              blocks: s.blocks.map(c => {
+                if (c.id !== cellId) return c;
+                return { ...c, items: c.items.map(f => f.id === featureId ? newData : f) };
+              })
+            };
+          })
+        }));
+      };
+
+      const removeFeatureData = (secId, cellId, featureId) => {
+        setData(prev => ({
+          ...prev,
+          sections: prev.sections.map(s => {
+            if (s.id !== secId) return s;
+            return {
+              ...s,
+              blocks: s.blocks.map(c => {
+                if (c.id !== cellId) return c;
+                const newItems = c.items.filter(f => f.id !== featureId);
+                return { ...c, items: newItems };
+              }).filter(c => c.items.length > 0) // Delete empty cells
+            };
+          })
+        }));
+      };
+
+      const swapCells = (secId, cellId, direction) => {
+        setData(prev => ({
+          ...prev,
+          sections: prev.sections.map(s => {
+            if (s.id !== secId) return s;
+            const idx = s.blocks.findIndex(b => b.id === cellId);
+            if (idx < 0) return s;
+            const newBlocks = [...s.blocks];
+            if (direction === -1 && idx > 0) {
+              [newBlocks[idx - 1], newBlocks[idx]] = [newBlocks[idx], newBlocks[idx - 1]];
+            }
+            if (direction === 1 && idx < s.blocks.length - 1) {
+              [newBlocks[idx + 1], newBlocks[idx]] = [newBlocks[idx], newBlocks[idx + 1]];
+            }
+            return { ...s, blocks: newBlocks };
+          })
+        }));
+      };
+
+      const dropCell = (secId, draggedCellId, targetCellId) => {
+        setData(prev => ({
+          ...prev,
+          sections: prev.sections.map(s => {
+            if (s.id !== secId) return s;
+            const newBlocks = [...(s.blocks || [])];
+            const draggedIdx = newBlocks.findIndex(b => b.id === draggedCellId);
+            const targetIdx = newBlocks.findIndex(b => b.id === targetCellId);
+            if (draggedIdx < 0 || targetIdx < 0 || draggedIdx === targetIdx) return s;
+            const [draggedItem] = newBlocks.splice(draggedIdx, 1);
+            const newTargetIdx = newBlocks.findIndex(b => b.id === targetCellId); // recalculate index
+            newBlocks.splice(newTargetIdx, 0, draggedItem);
+            return { ...s, blocks: newBlocks };
+          })
+        }));
+      };
+
+      const mergeCells = (secId, draggedCellId, targetCellId) => {
+        setData(prev => ({
+          ...prev,
+          sections: prev.sections.map(s => {
+            if (s.id !== secId) return s;
+            const newBlocks = [...(s.blocks || [])];
+            const draggedIdx = newBlocks.findIndex(b => b.id === draggedCellId);
+            const targetIdx = newBlocks.findIndex(b => b.id === targetCellId);
             if (draggedIdx < 0 || targetIdx < 0 || draggedIdx === targetIdx) return s;
             
-            const [draggedItem] = newBlocks.splice(draggedIdx, 1);
-            newBlocks.splice(targetIdx, 0, draggedItem);
+            const draggedCell = newBlocks[draggedIdx];
+            newBlocks[targetIdx] = { ...newBlocks[targetIdx], items: [...newBlocks[targetIdx].items, ...draggedCell.items] };
+            newBlocks.splice(draggedIdx, 1);
             return { ...s, blocks: newBlocks };
           })
-        });
+        }));
       };
 
-      // 블록 추가 모달 상태 관리 ({secId, insertAfterId})
+      // 블록 추가 모달 상태 관리 ({secId, targetCellId})
       const [addingInfo, setAddingInfo] = useState(null);
 
       return (
@@ -621,30 +740,37 @@
                     )}
                   </div>
 
-                  {/* 블록 리스트 렌더링 */}
+                                    {/* 블록 리스트 렌더링 */}
                   <div className="flex flex-wrap gap-4 items-start w-full">
-                    {(section.blocks || []).map(block => (
-                      <BlockContainer key={block.id} block={block} isAdmin={isAdmin} onUpdateBlock={d => updateBlock(section.id, block.id, d)} onDelete={() => removeBlock(section.id, block.id)} onDropBlock={(draggedId, targetId) => dropBlock(section.id, draggedId, targetId)} onInsertBlock={() => setAddingInfo({secId: section.id, insertAfterId: block.id})}>
-                        {block.type === 'text' && <TextBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
-                        {block.type === 'checklist' && <ChecklistBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
-                        {block.type === 'cabinet' && <CardGridBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
-                        {block.type === 'table' && <TableBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
-                        {block.type === 'step' && <StepBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
-                        {block.type === 'infoBox' && <InfoBoxBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
-                        {block.type === 'warningBox' && <WarningBoxBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
-                        {block.type === 'flowchart' && <FlowchartBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
-                        {block.type === 'photo' && <PhotoBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
-                        {block.type === 'divider' && <DividerBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
-                        {block.type === 'keyValueBox' && <KeyValueBoxBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
+                    {(section.blocks || []).map(cell => (
+                      <BlockContainer key={cell.id} block={cell} isAdmin={isAdmin} onUpdateBlock={d => updateCell(section.id, cell.id, d)} onDelete={() => removeCell(section.id, cell.id)} onMoveUp={() => swapCells(section.id, cell.id, -1)} onMoveDown={() => swapCells(section.id, cell.id, 1)} onDropBlock={(draggedId, targetId) => dropCell(section.id, draggedId, targetId)} onMergeBlock={(draggedId, targetId) => mergeCells(section.id, draggedId, targetId)} onInsertFeature={() => setAddingInfo({secId: section.id, targetCellId: cell.id})}>
+                        {cell.items.map(feature => (
+                          <div key={feature.id} className="relative group/featureitem w-full">
+                            {isAdmin && cell.items.length > 1 && (
+                               <button onClick={() => removeFeatureData(section.id, cell.id, feature.id)} className="absolute -left-3 -top-3 w-6 h-6 bg-red-100 text-red-500 rounded-full opacity-0 group-hover/featureitem:opacity-100 shadow flex items-center justify-center hover:bg-red-500 hover:text-white transition z-20 text-xs font-bold" title="이 기능 삭제">✕</button>
+                            )}
+                            {feature.type === 'text' && <TextBlock data={feature} onChange={d => updateFeatureData(section.id, cell.id, feature.id, d)} isAdmin={isAdmin} />}
+                            {feature.type === 'checklist' && <ChecklistBlock data={feature} onChange={d => updateFeatureData(section.id, cell.id, feature.id, d)} isAdmin={isAdmin} />}
+                            {feature.type === 'cabinet' && <CardGridBlock data={feature} onChange={d => updateFeatureData(section.id, cell.id, feature.id, d)} isAdmin={isAdmin} />}
+                            {feature.type === 'table' && <TableBlock data={feature} onChange={d => updateFeatureData(section.id, cell.id, feature.id, d)} isAdmin={isAdmin} />}
+                            {feature.type === 'step' && <StepBlock data={feature} onChange={d => updateFeatureData(section.id, cell.id, feature.id, d)} isAdmin={isAdmin} />}
+                            {feature.type === 'infoBox' && <InfoBoxBlock data={feature} onChange={d => updateFeatureData(section.id, cell.id, feature.id, d)} isAdmin={isAdmin} />}
+                            {feature.type === 'warningBox' && <WarningBoxBlock data={feature} onChange={d => updateFeatureData(section.id, cell.id, feature.id, d)} isAdmin={isAdmin} />}
+                            {feature.type === 'flowchart' && <FlowchartBlock data={feature} onChange={d => updateFeatureData(section.id, cell.id, feature.id, d)} isAdmin={isAdmin} />}
+                            {feature.type === 'photo' && <PhotoBlock data={feature} onChange={d => updateFeatureData(section.id, cell.id, feature.id, d)} isAdmin={isAdmin} />}
+                            {feature.type === 'divider' && <DividerBlock data={feature} onChange={d => updateFeatureData(section.id, cell.id, feature.id, d)} isAdmin={isAdmin} />}
+                            {feature.type === 'keyValueBox' && <KeyValueBoxBlock data={feature} onChange={d => updateFeatureData(section.id, cell.id, feature.id, d)} isAdmin={isAdmin} />}
+                          </div>
+                        ))}
                       </BlockContainer>
                     ))}
                   </div>
 
-                  {/* 블록 추가 트리거 */}
+                  {/* 새 칸 추가 트리거 */}
                   {isAdmin && (
                     <div className="mt-4 text-center w-full">
-                       <button onClick={() => setAddingInfo({secId: section.id})} className="py-2 px-6 bg-white border border-slate-200 text-slate-500 rounded-full shadow-sm hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition font-bold text-sm">
-                         ＋ 맨 아래에 블록 추가
+                       <button onClick={() => setAddingInfo({secId: section.id, targetCellId: null})} className="py-2 px-6 bg-white border border-slate-200 text-slate-500 rounded-full shadow-sm hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition font-bold text-sm">
+                         ＋ 새로운 칸 만들기
                        </button>
                     </div>
                   )}
@@ -661,11 +787,11 @@
             </div>
           </main>
 
-          {/* 블록 유형 선택 모달 */}
+                    {/* 기능 유형 선택 모달 */}
           {addingInfo && (
             <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setAddingInfo(null)}>
               <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-2xl fade-in flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
-                <h3 className="text-2xl font-black mb-6 text-slate-800 border-b-2 border-slate-100 pb-4 shrink-0">추가할 항목 선택</h3>
+                <h3 className="text-2xl font-black mb-6 text-slate-800 border-b-2 border-slate-100 pb-4 shrink-0">추가할 기능 선택</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto pr-2 flex-1" style={{ scrollbarWidth: 'thin' }}>
                   {[
                     { type: 'step', icon: '①', title: '스텝', desc: '번호 순서 항목' },
@@ -680,7 +806,7 @@
                     { type: 'keyValueBox', icon: '📑', title: '정보 박스', desc: '라벨·값 정보' },
                     { type: 'cabinet', icon: '🗂️', title: '카드 그리드', desc: '캐비닛형 카드' }
                   ].map(item => (
-                    <button key={item.type} onClick={() => { addBlock(addingInfo.secId, item.type, addingInfo.insertAfterId); setAddingInfo(null); }} className="flex items-center text-left p-4 border border-slate-200 rounded-2xl hover:border-indigo-400 hover:shadow-md hover:-translate-y-1 transition-all group bg-white">
+                    <button key={item.type} onClick={() => { addFeature(addingInfo.secId, item.type, addingInfo.targetCellId); setAddingInfo(null); }} className="flex items-center text-left p-4 border border-slate-200 rounded-2xl hover:border-indigo-400 hover:shadow-md hover:-translate-y-1 transition-all group bg-white">
                       <div className="w-14 h-14 flex items-center justify-center rounded-xl bg-slate-50 text-3xl group-hover:bg-indigo-50 transition-colors shrink-0 shadow-sm border border-slate-100">
                         {item.icon}
                       </div>
