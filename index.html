@@ -92,12 +92,15 @@
         <div 
           className={`relative group/cell fade-in bg-white p-6 rounded-2xl shadow-sm border border-slate-200 transition-all flex flex-col gap-6 ${widthClass}`}
           draggable={draggable}
-          onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('cellId', block.id); }}
+          onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', `cell:${block.id}`); }}
           onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
           onDrop={e => {
             e.preventDefault();
-            const draggedId = e.dataTransfer.getData('cellId');
-            if (draggedId && draggedId !== block.id) onDropBlock(draggedId, block.id);
+            const data = e.dataTransfer.getData('text/plain');
+            if (data && data.startsWith('cell:')) {
+               const draggedId = data.replace('cell:', '');
+               if (draggedId !== block.id) onDropBlock(draggedId, block.id);
+            }
           }}
           onDragEnd={() => setDraggable(false)}
         >
@@ -117,7 +120,7 @@
             </div>
           )}
           
-          <div className="flex flex-col gap-6 w-full">
+          <div className="flex flex-row flex-wrap gap-y-6 gap-x-6 w-full items-start">
             {children}
           </div>
 
@@ -130,8 +133,11 @@
                 onDragOver={e => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'move'; }}
                 onDrop={e => {
                   e.preventDefault(); e.stopPropagation();
-                  const draggedId = e.dataTransfer.getData('cellId');
-                  if (draggedId && draggedId !== block.id) onMergeBlock(draggedId, block.id);
+                  const data = e.dataTransfer.getData('text/plain');
+                  if (data && data.startsWith('cell:')) {
+                     const draggedId = data.replace('cell:', '');
+                     if (draggedId !== block.id) onMergeBlock(draggedId, block.id);
+                  }
                 }}
                 className="w-full py-2 border border-dashed border-blue-300 text-blue-400 rounded-xl bg-blue-50/30 text-center text-sm font-bold flex justify-center items-center"
               >
@@ -762,10 +768,27 @@
                   <div className="flex flex-wrap gap-4 items-start w-full">
                     {(section.blocks || []).map(cell => (
                       <BlockContainer key={cell.id} block={cell} isAdmin={isAdmin} onUpdateBlock={d => updateCell(section.id, cell.id, d)} onDelete={() => removeCell(section.id, cell.id)} onMoveUp={() => swapCells(section.id, cell.id, -1)} onMoveDown={() => swapCells(section.id, cell.id, 1)} onDropBlock={(draggedId, targetId) => dropCell(section.id, draggedId, targetId)} onMergeBlock={(draggedId, targetId) => mergeCells(section.id, draggedId, targetId)} onInsertFeature={() => setAddingInfo({secId: section.id, targetCellId: cell.id})}>
-                        {cell.items.map(feature => (
-                          <div key={feature.id} className="relative group/featureitem w-full">
-                            {isAdmin && cell.items.length > 1 && (
-                               <button onClick={() => removeFeatureData(section.id, cell.id, feature.id)} className="absolute -left-3 -top-3 w-6 h-6 bg-red-100 text-red-500 rounded-full opacity-0 group-hover/featureitem:opacity-100 shadow flex items-center justify-center hover:bg-red-500 hover:text-white transition z-20 text-xs font-bold" title="이 기능 삭제">✕</button>
+                        {cell.items.map(feature => {
+                          const w = feature.width || '100%';
+                          let featureClass = 'w-full';
+                          if (w === '50%') featureClass = 'w-full md:w-[calc(50%-0.75rem)]';
+                          if (w === '33%') featureClass = 'w-full md:w-[calc(33.333%-1rem)]';
+                          if (w === '66%') featureClass = 'w-full md:w-[calc(66.666%-0.5rem)]';
+
+                          return (
+                          <div key={feature.id} className={`relative group/featureitem ${featureClass}`}>
+                            {isAdmin && (
+                               <div className="absolute -left-3 -top-3 flex items-center gap-1 opacity-0 group-hover/featureitem:opacity-100 transition z-20">
+                                 {cell.items.length > 1 && (
+                                    <button onClick={() => removeFeatureData(section.id, cell.id, feature.id)} className="w-6 h-6 bg-red-100 text-red-500 rounded-full shadow flex items-center justify-center hover:bg-red-500 hover:text-white transition text-xs font-bold" title="이 기능 삭제">✕</button>
+                                 )}
+                                 <button onClick={() => {
+                                   const nextW = w === '100%' ? '50%' : w === '50%' ? '33%' : w === '33%' ? '66%' : '100%';
+                                   updateFeatureData(section.id, cell.id, feature.id, { ...feature, width: nextW });
+                                 }} className="px-2 h-6 bg-indigo-50 text-indigo-600 border border-indigo-200 rounded shadow-sm flex items-center justify-center hover:bg-indigo-500 hover:text-white transition text-[10px] font-bold">
+                                   {w === '100%' ? '폭: 100%' : w === '50%' ? '폭: 50%' : w === '33%' ? '폭: 33%' : '폭: 66%'}
+                                 </button>
+                               </div>
                             )}
                             {feature.type === 'text' && <TextBlock data={feature} onChange={d => updateFeatureData(section.id, cell.id, feature.id, d)} isAdmin={isAdmin} />}
                             {feature.type === 'checklist' && <ChecklistBlock data={feature} onChange={d => updateFeatureData(section.id, cell.id, feature.id, d)} isAdmin={isAdmin} />}
@@ -779,7 +802,8 @@
                             {feature.type === 'divider' && <DividerBlock data={feature} onChange={d => updateFeatureData(section.id, cell.id, feature.id, d)} isAdmin={isAdmin} />}
                             {feature.type === 'keyValueBox' && <KeyValueBoxBlock data={feature} onChange={d => updateFeatureData(section.id, cell.id, feature.id, d)} isAdmin={isAdmin} />}
                           </div>
-                        ))}
+                          );
+                        })}
                       </BlockContainer>
                     ))}
                   </div>
