@@ -73,7 +73,7 @@
      * [컴포넌트] 블록 단위 제어 컨테이너 (레이아웃 분할 기능 포함)
      * 관리자 모드일 경우 폭 조절 및 삭제 버튼을 제공합니다.
      */
-    const BlockContainer = ({ children, isAdmin, block, onUpdateBlock, onMoveUp, onMoveDown, onDelete }) => {
+    const BlockContainer = ({ children, isAdmin, block, onUpdateBlock, onDropBlock, onInsertBlock, onDelete }) => {
       const w = block.width || '100%';
       let widthClass = 'w-full';
       if (w === '50%') widthClass = 'w-full md:w-[calc(50%-0.5rem)]';
@@ -85,12 +85,27 @@
          onUpdateBlock({...block, width: next});
       };
 
+      const [draggable, setDraggable] = React.useState(false);
+
       return (
-        <div className={`relative group fade-in border border-transparent hover:border-indigo-100 rounded-2xl transition-all p-1 ${widthClass}`}>
+        <div 
+          className={`relative group fade-in border border-transparent hover:border-indigo-100 rounded-2xl transition-all p-1 ${widthClass}`}
+          draggable={draggable}
+          onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('blockId', block.id); }}
+          onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+          onDrop={e => {
+            const draggedId = e.dataTransfer.getData('blockId');
+            if (draggedId && draggedId !== block.id) onDropBlock(draggedId, block.id);
+          }}
+        >
           {isAdmin && (
             <div className="absolute right-2 -top-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition z-30">
-              <button onClick={onMoveUp} className="w-6 h-6 bg-slate-50 text-slate-500 border border-slate-200 rounded-full shadow-sm flex items-center justify-center hover:bg-slate-200 hover:text-slate-800 transition font-bold text-xs" title="이전으로 이동">◀</button>
-              <button onClick={onMoveDown} className="w-6 h-6 bg-slate-50 text-slate-500 border border-slate-200 rounded-full shadow-sm flex items-center justify-center hover:bg-slate-200 hover:text-slate-800 transition font-bold text-xs" title="다음으로 이동">▶</button>
+              <div 
+                 onMouseEnter={() => setDraggable(true)} 
+                 onMouseLeave={() => setDraggable(false)}
+                 className="w-6 h-6 bg-slate-50 text-slate-500 border border-slate-200 rounded-full shadow-sm flex items-center justify-center hover:bg-slate-200 hover:text-slate-800 transition font-bold text-xs cursor-grab" 
+                 title="드래그하여 순서 변경">✥</div>
+              <button onClick={onInsertBlock} className="px-2 py-1 bg-emerald-50 text-emerald-600 border border-emerald-200 text-xs font-bold rounded shadow-sm hover:bg-emerald-500 hover:text-white transition" title="이 위치에 새 블록 삽입">＋ 삽입</button>
               <button onClick={changeWidth} className="px-2 py-1 bg-indigo-50 text-indigo-600 border border-indigo-200 text-xs font-bold rounded shadow-sm hover:bg-indigo-500 hover:text-white transition" title="블록 너비 변경">
                 {w === '100%' ? '가로: 100%' : w === '50%' ? '가로: 50%' : w === '33%' ? '가로: 33%' : '가로: 66%'}
               </button>
@@ -375,7 +390,7 @@
         reader.readAsDataURL(file);
       };
       return (
-        <div className="bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
+        <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-3">
           {data.imageUrl ? (
             <div className="relative group rounded-xl overflow-hidden">
               <img src={data.imageUrl} alt="uploaded" className="w-full h-auto object-contain max-h-[600px] bg-slate-50" />
@@ -403,6 +418,11 @@
                 </div>
               )}
             </div>
+          )}
+          {isAdmin ? (
+            <input type="text" value={data.description || ""} onChange={e => onChange({...data, description: e.target.value})} placeholder="사진 설명을 입력하세요 (빈 칸이면 사용자 화면에 표시되지 않습니다)" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-300 text-sm font-medium text-slate-700" />
+          ) : (
+            data.description && <div className="px-2 pb-1 text-center text-sm font-medium text-slate-600">{data.description}</div>
           )}
         </div>
       );
@@ -482,7 +502,7 @@
       };
 
       // 블록 제어 함수
-      const addBlock = (secId, type) => {
+      const addBlock = (secId, type, insertAfterId = null) => {
         let newBlock = { id: generateId(), type };
         if(type === 'text') newBlock.content = "여기에 텍스트를 입력하세요.";
         if(type === 'checklist') newBlock = { ...newBlock, title: "새 체크리스트", items: [{id: generateId(), text: "항목 1", checked: false}] };
@@ -497,7 +517,19 @@
 
         setData({
           ...data, 
-          sections: data.sections.map(s => s.id === secId ? {...s, blocks: [...(s.blocks||[]), newBlock]} : s)
+          sections: data.sections.map(s => {
+            if (s.id !== secId) return s;
+            const newBlocks = [...(s.blocks || [])];
+            if (insertAfterId) {
+              const idx = newBlocks.findIndex(b => b.id === insertAfterId);
+              if (idx >= 0) {
+                newBlocks.splice(idx + 1, 0, newBlock);
+                return { ...s, blocks: newBlocks };
+              }
+            }
+            newBlocks.push(newBlock);
+            return { ...s, blocks: newBlocks };
+          })
         });
       };
 
@@ -515,30 +547,25 @@
         });
       };
 
-      const moveBlock = (secId, blockId, direction) => {
+      const dropBlock = (secId, draggedBlockId, targetBlockId) => {
         setData({
           ...data,
           sections: data.sections.map(s => {
             if (s.id !== secId) return s;
-            const idx = s.blocks.findIndex(b => b.id === blockId);
-            if (idx < 0) return s;
-            if (direction === -1 && idx > 0) {
-              const newBlocks = [...s.blocks];
-              [newBlocks[idx - 1], newBlocks[idx]] = [newBlocks[idx], newBlocks[idx - 1]];
-              return { ...s, blocks: newBlocks };
-            }
-            if (direction === 1 && idx < s.blocks.length - 1) {
-              const newBlocks = [...s.blocks];
-              [newBlocks[idx + 1], newBlocks[idx]] = [newBlocks[idx], newBlocks[idx + 1]];
-              return { ...s, blocks: newBlocks };
-            }
-            return s;
+            const newBlocks = [...(s.blocks||[])];
+            const draggedIdx = newBlocks.findIndex(b => b.id === draggedBlockId);
+            const targetIdx = newBlocks.findIndex(b => b.id === targetBlockId);
+            if (draggedIdx < 0 || targetIdx < 0 || draggedIdx === targetIdx) return s;
+            
+            const [draggedItem] = newBlocks.splice(draggedIdx, 1);
+            newBlocks.splice(targetIdx, 0, draggedItem);
+            return { ...s, blocks: newBlocks };
           })
         });
       };
 
-      // 블록 추가 모달 상태 관리
-      const [addingToSec, setAddingToSec] = useState(null);
+      // 블록 추가 모달 상태 관리 ({secId, insertAfterId})
+      const [addingInfo, setAddingInfo] = useState(null);
 
       return (
         <div className="min-h-screen flex flex-col md:flex-row text-slate-800">
@@ -597,7 +624,7 @@
                   {/* 블록 리스트 렌더링 */}
                   <div className="flex flex-wrap gap-4 items-start w-full">
                     {(section.blocks || []).map(block => (
-                      <BlockContainer key={block.id} block={block} isAdmin={isAdmin} onUpdateBlock={d => updateBlock(section.id, block.id, d)} onDelete={() => removeBlock(section.id, block.id)} onMoveUp={() => moveBlock(section.id, block.id, -1)} onMoveDown={() => moveBlock(section.id, block.id, 1)}>
+                      <BlockContainer key={block.id} block={block} isAdmin={isAdmin} onUpdateBlock={d => updateBlock(section.id, block.id, d)} onDelete={() => removeBlock(section.id, block.id)} onDropBlock={(draggedId, targetId) => dropBlock(section.id, draggedId, targetId)} onInsertBlock={() => setAddingInfo({secId: section.id, insertAfterId: block.id})}>
                         {block.type === 'text' && <TextBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
                         {block.type === 'checklist' && <ChecklistBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
                         {block.type === 'cabinet' && <CardGridBlock data={block} onChange={d => updateBlock(section.id, block.id, d)} isAdmin={isAdmin} />}
@@ -615,9 +642,9 @@
 
                   {/* 블록 추가 트리거 */}
                   {isAdmin && (
-                    <div className="mt-4 text-center">
-                       <button onClick={() => setAddingToSec(section.id)} className="py-2 px-6 bg-white border border-slate-200 text-slate-500 rounded-full shadow-sm hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition font-bold text-sm">
-                         ＋ 블록 추가
+                    <div className="mt-4 text-center w-full">
+                       <button onClick={() => setAddingInfo({secId: section.id})} className="py-2 px-6 bg-white border border-slate-200 text-slate-500 rounded-full shadow-sm hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition font-bold text-sm">
+                         ＋ 맨 아래에 블록 추가
                        </button>
                     </div>
                   )}
@@ -635,8 +662,8 @@
           </main>
 
           {/* 블록 유형 선택 모달 */}
-          {addingToSec && (
-            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setAddingToSec(null)}>
+          {addingInfo && (
+            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setAddingInfo(null)}>
               <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-2xl fade-in flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
                 <h3 className="text-2xl font-black mb-6 text-slate-800 border-b-2 border-slate-100 pb-4 shrink-0">추가할 항목 선택</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto pr-2 flex-1" style={{ scrollbarWidth: 'thin' }}>
@@ -653,7 +680,7 @@
                     { type: 'keyValueBox', icon: '📑', title: '정보 박스', desc: '라벨·값 정보' },
                     { type: 'cabinet', icon: '🗂️', title: '카드 그리드', desc: '캐비닛형 카드' }
                   ].map(item => (
-                    <button key={item.type} onClick={() => { addBlock(addingToSec, item.type); setAddingToSec(null); }} className="flex items-center text-left p-4 border border-slate-200 rounded-2xl hover:border-indigo-400 hover:shadow-md hover:-translate-y-1 transition-all group bg-white">
+                    <button key={item.type} onClick={() => { addBlock(addingInfo.secId, item.type, addingInfo.insertAfterId); setAddingInfo(null); }} className="flex items-center text-left p-4 border border-slate-200 rounded-2xl hover:border-indigo-400 hover:shadow-md hover:-translate-y-1 transition-all group bg-white">
                       <div className="w-14 h-14 flex items-center justify-center rounded-xl bg-slate-50 text-3xl group-hover:bg-indigo-50 transition-colors shrink-0 shadow-sm border border-slate-100">
                         {item.icon}
                       </div>
@@ -665,7 +692,7 @@
                   ))}
                 </div>
                 <div className="mt-8 shrink-0">
-                  <button onClick={() => setAddingToSec(null)} className="w-full py-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors text-lg">취소</button>
+                  <button onClick={() => setAddingInfo(null)} className="w-full py-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors text-lg">취소</button>
                 </div>
               </div>
             </div>
