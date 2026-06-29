@@ -259,6 +259,168 @@
       );
     };
 
+    /** [블록] 스텝 블록 */
+    const StepBlock = ({ data, onChange, isAdmin }) => {
+      const addItem = () => onChange({...data, items: [...data.items, { id: generateId(), title: "새로운 단계", content: "설명을 입력하세요." }]});
+      const removeItem = (id) => onChange({...data, items: data.items.filter(i => i.id !== id)});
+      return (
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+          <div className="space-y-4 relative before:absolute before:inset-0 before:ml-[28px] before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-slate-200">
+            {data.items.map((item, idx) => (
+              <div key={item.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                <div className="flex items-center justify-center w-14 h-14 rounded-full border-4 border-white bg-indigo-50 text-indigo-600 font-bold text-xl shadow-sm shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                  {idx + 1}
+                </div>
+                <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative group-hover:border-indigo-300 transition-colors">
+                  {isAdmin && <button onClick={() => removeItem(item.id)} className="absolute -top-2 -right-2 bg-red-100 text-red-500 w-6 h-6 rounded-full font-bold opacity-0 group-hover:opacity-100 transition z-20 flex items-center justify-center text-sm shadow-sm">✕</button>}
+                  {isAdmin ? (
+                    <>
+                      <input type="text" value={item.title} onChange={e => { const newItems=[...data.items]; newItems[idx].title=e.target.value; onChange({...data, items:newItems}); }} className="font-bold text-lg w-full bg-transparent border-b border-slate-200 focus:outline-none mb-2 text-indigo-900" placeholder="단계 제목" />
+                      <RichTextEditor value={item.content} onChange={val => { const newItems=[...data.items]; newItems[idx].content=val; onChange({...data, items:newItems}); }} readOnly={false} />
+                    </>
+                  ) : (
+                    <>
+                      <h4 className="font-bold text-lg mb-2 text-indigo-900">{item.title}</h4>
+                      <RichTextEditor value={item.content} readOnly={true} />
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+          {isAdmin && <button onClick={addItem} className="mt-8 w-full py-3 border-2 border-dashed border-indigo-200 text-indigo-500 hover:bg-indigo-50 hover:text-indigo-600 transition rounded-xl font-bold">＋ 단계 추가</button>}
+        </div>
+      );
+    };
+
+    /** [블록] 안내 박스 (파란색) */
+    const InfoBoxBlock = ({ data, onChange, isAdmin }) => (
+      <div className="bg-blue-50/50 border border-blue-200 p-5 rounded-2xl flex gap-4 items-start shadow-sm">
+        <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl shrink-0">ℹ️</div>
+        <div className="flex-1 pt-1">
+          {isAdmin ? (
+            <RichTextEditor value={data.content} onChange={val => onChange({...data, content: val})} readOnly={false} />
+          ) : (
+             <RichTextEditor value={data.content} readOnly={true} />
+          )}
+        </div>
+      </div>
+    );
+
+    /** [블록] 경고 박스 (노란색) */
+    const WarningBoxBlock = ({ data, onChange, isAdmin }) => (
+      <div className="bg-amber-50/50 border border-amber-200 p-5 rounded-2xl flex gap-4 items-start shadow-sm">
+        <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-xl shrink-0">⚠️</div>
+        <div className="flex-1 pt-1">
+          {isAdmin ? (
+            <RichTextEditor value={data.content} onChange={val => onChange({...data, content: val})} readOnly={false} />
+          ) : (
+             <RichTextEditor value={data.content} readOnly={true} />
+          )}
+        </div>
+      </div>
+    );
+
+    /** [블록] 흐름도 (단계 화살표) */
+    const FlowchartBlock = ({ data, onChange, isAdmin }) => {
+      const addItem = () => onChange({...data, items: [...data.items, { id: generateId(), text: "새 단계" }]});
+      const removeItem = (id) => onChange({...data, items: data.items.filter(i => i.id !== id)});
+      return (
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
+          <div className="flex items-center gap-2 min-w-max">
+            {data.items.map((item, idx) => (
+              <React.Fragment key={item.id}>
+                <div className="relative group bg-slate-800 text-white px-5 py-3 rounded-xl font-bold shadow-sm flex items-center justify-center min-w-[100px]">
+                  {isAdmin && <button onClick={() => removeItem(item.id)} className="absolute -top-2 -right-2 bg-red-100 text-red-500 w-5 h-5 flex items-center justify-center rounded-full text-xs opacity-0 group-hover:opacity-100 transition z-20">✕</button>}
+                  {isAdmin ? (
+                     <input type="text" value={item.text} onChange={e => { const newItems=[...data.items]; newItems[idx].text=e.target.value; onChange({...data, items:newItems}); }} className="bg-transparent focus:outline-none w-full text-center text-white" />
+                  ) : item.text}
+                </div>
+                {idx < data.items.length - 1 && <div className="text-slate-300 text-2xl font-bold px-2">➔</div>}
+              </React.Fragment>
+            ))}
+          </div>
+          {isAdmin && <button onClick={addItem} className="mt-6 py-2 px-6 border-2 border-dashed border-slate-300 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition rounded-lg font-bold text-sm">＋ 단계 추가</button>}
+        </div>
+      );
+    };
+
+    /** [블록] 사진 칸 */
+    const PhotoBlock = ({ data, onChange, isAdmin }) => {
+      const handleUpload = (e) => {
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => onChange({...data, imageUrl: event.target.result});
+        reader.readAsDataURL(file);
+      };
+      return (
+        <div className="bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
+          {data.imageUrl ? (
+            <div className="relative group rounded-xl overflow-hidden">
+              <img src={data.imageUrl} alt="uploaded" className="w-full h-auto object-contain max-h-[600px] bg-slate-50" />
+              {isAdmin && (
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                  <label className="bg-white text-slate-800 px-6 py-3 rounded-xl font-bold cursor-pointer hover:bg-slate-100 shadow-lg">
+                    이미지 변경
+                    <input type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+                  </label>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="w-full h-64 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center hover:bg-slate-100 transition">
+              {isAdmin ? (
+                <label className="text-slate-500 hover:text-indigo-600 font-bold cursor-pointer flex flex-col items-center gap-3 w-full h-full justify-center">
+                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm text-3xl">📷</div>
+                  <span>클릭하여 이미지 업로드</span>
+                  <input type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+                </label>
+              ) : (
+                <div className="text-slate-400 flex flex-col items-center gap-2">
+                  <span className="text-3xl grayscale opacity-50">📷</span>
+                  <span>등록된 이미지가 없습니다</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    /** [블록] 구분선 */
+    const DividerBlock = ({ isAdmin, onDelete }) => (
+      <div className="py-6 flex items-center group relative">
+        <div className="flex-1 border-t-2 border-dashed border-slate-200"></div>
+        <div className="mx-4 text-slate-300 text-sm font-bold">✂</div>
+        <div className="flex-1 border-t-2 border-dashed border-slate-200"></div>
+      </div>
+    );
+
+    /** [블록] 정보 박스 (라벨·값) */
+    const KeyValueBoxBlock = ({ data, onChange, isAdmin }) => {
+      const addItem = () => onChange({...data, items: [...data.items, { id: generateId(), label: "항목명", value: "내용을 입력하세요" }]});
+      const removeItem = (id) => onChange({...data, items: data.items.filter(i => i.id !== id)});
+      return (
+        <div className="bg-slate-50 border border-slate-200 p-6 rounded-2xl shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {data.items.map((item, idx) => (
+              <div key={item.id} className="relative group flex items-center bg-white border border-slate-200 p-4 rounded-xl shadow-sm hover:border-blue-300 transition-colors">
+                {isAdmin && <button onClick={() => removeItem(item.id)} className="absolute -top-2 -right-2 bg-red-100 text-red-500 w-6 h-6 flex items-center justify-center rounded-full text-xs opacity-0 group-hover:opacity-100 transition z-20 font-bold shadow-sm">✕</button>}
+                <div className="w-1/3 border-r border-slate-100 pr-4 font-bold text-slate-500">
+                  {isAdmin ? <input type="text" value={item.label} onChange={e => { const newItems=[...data.items]; newItems[idx].label=e.target.value; onChange({...data, items:newItems}); }} className="w-full bg-transparent focus:outline-none" /> : item.label}
+                </div>
+                <div className="w-2/3 pl-4 font-medium text-slate-800">
+                  {isAdmin ? <input type="text" value={item.value} onChange={e => { const newItems=[...data.items]; newItems[idx].value=e.target.value; onChange({...data, items:newItems}); }} className="w-full bg-transparent focus:outline-none" /> : item.value}
+                </div>
+              </div>
+            ))}
+          </div>
+          {isAdmin && <button onClick={addItem} className="mt-6 w-full py-3 border-2 border-dashed border-slate-300 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition rounded-xl font-bold">＋ 정보 항목 추가</button>}
+        </div>
+      );
+    };
+
     /**
      * 메인 애플리케이션 컴포넌트
      */
@@ -306,6 +468,12 @@
         if(type === 'checklist') newBlock = { ...newBlock, title: "새 체크리스트", items: [{id: generateId(), text: "항목 1", checked: false}] };
         if(type === 'cabinet') newBlock = { ...newBlock, title: "새 카드 그리드", items: [{id: generateId(), title: "제목", content: "내용"}] };
         if(type === 'table') newBlock = { ...newBlock, headers: ["컬럼1", "컬럼2"], rows: [{id: generateId(), cells: ["",""]}] };
+        if(type === 'step') newBlock = { ...newBlock, items: [{id: generateId(), title: "단계 1", content: "내용을 입력하세요."}] };
+        if(type === 'infoBox') newBlock = { ...newBlock, content: "안내 메시지를 입력하세요." };
+        if(type === 'warningBox') newBlock = { ...newBlock, content: "주의 메시지를 입력하세요." };
+        if(type === 'flowchart') newBlock = { ...newBlock, items: [{id: generateId(), text: "시작"}, {id: generateId(), text: "진행"}] };
+        if(type === 'photo') newBlock = { ...newBlock, imageUrl: "" };
+        if(type === 'keyValueBox') newBlock = { ...newBlock, items: [{id: generateId(), label: "항목명", value: "내용"}] };
 
         setData({
           ...data, 
@@ -420,15 +588,36 @@
           {/* 블록 유형 선택 모달 */}
           {addingToSec && (
             <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setAddingToSec(null)}>
-              <div className="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-sm fade-in" onClick={e => e.stopPropagation()}>
-                <h3 className="text-lg font-bold mb-4 text-center border-b pb-3">추가할 항목 선택</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <button onClick={() => { addBlock(addingToSec, 'text'); setAddingToSec(null); }} className="p-4 border rounded-xl hover:bg-slate-50 hover:border-indigo-300 flex flex-col items-center gap-2 transition"><span className="text-2xl">📝</span><span className="text-sm font-bold">텍스트</span></button>
-                  <button onClick={() => { addBlock(addingToSec, 'checklist'); setAddingToSec(null); }} className="p-4 border rounded-xl hover:bg-slate-50 hover:border-indigo-300 flex flex-col items-center gap-2 transition"><span className="text-2xl">✅</span><span className="text-sm font-bold">체크 항목</span></button>
-                  <button onClick={() => { addBlock(addingToSec, 'cabinet'); setAddingToSec(null); }} className="p-4 border rounded-xl hover:bg-slate-50 hover:border-indigo-300 flex flex-col items-center gap-2 transition"><span className="text-2xl">🗂️</span><span className="text-sm font-bold">카드 그리드</span></button>
-                  <button onClick={() => { addBlock(addingToSec, 'table'); setAddingToSec(null); }} className="p-4 border rounded-xl hover:bg-slate-50 hover:border-indigo-300 flex flex-col items-center gap-2 transition"><span className="text-2xl">📊</span><span className="text-sm font-bold">표 (Table)</span></button>
+              <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-2xl fade-in flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                <h3 className="text-2xl font-black mb-6 text-slate-800 border-b-2 border-slate-100 pb-4 shrink-0">추가할 항목 선택</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto pr-2 flex-1" style={{ scrollbarWidth: 'thin' }}>
+                  {[
+                    { type: 'step', icon: '①', title: '스텝', desc: '번호 순서 항목' },
+                    { type: 'checklist', icon: '☑️', title: '체크 항목', desc: '체크박스 리스트' },
+                    { type: 'text', icon: '📝', title: '텍스트', desc: '자유 입력 블록' },
+                    { type: 'infoBox', icon: 'ℹ️', title: '안내 박스', desc: '파란 안내 메시지' },
+                    { type: 'warningBox', icon: '⚠️', title: '경고 박스', desc: '노란 주의 메시지' },
+                    { type: 'table', icon: '⊞', title: '표', desc: '행·열 직접 입력' },
+                    { type: 'flowchart', icon: '➡', title: '흐름도', desc: '단계 화살표' },
+                    { type: 'photo', icon: '📷', title: '사진 칸', desc: '이미지 업로드' },
+                    { type: 'divider', icon: '➖', title: '구분선', desc: '섹션 구분' },
+                    { type: 'keyValueBox', icon: '📑', title: '정보 박스', desc: '라벨·값 정보' },
+                    { type: 'cabinet', icon: '🗂️', title: '카드 그리드', desc: '캐비닛형 카드' }
+                  ].map(item => (
+                    <button key={item.type} onClick={() => { addBlock(addingToSec, item.type); setAddingToSec(null); }} className="flex items-center text-left p-4 border border-slate-200 rounded-2xl hover:border-indigo-400 hover:shadow-md hover:-translate-y-1 transition-all group bg-white">
+                      <div className="w-14 h-14 flex items-center justify-center rounded-xl bg-slate-50 text-3xl group-hover:bg-indigo-50 transition-colors shrink-0 shadow-sm border border-slate-100">
+                        {item.icon}
+                      </div>
+                      <div className="ml-5">
+                        <div className="font-bold text-slate-800 text-lg group-hover:text-indigo-700 transition-colors">{item.title}</div>
+                        <div className="text-sm text-slate-400 font-medium mt-0.5">{item.desc}</div>
+                      </div>
+                    </button>
+                  ))}
                 </div>
-                <button onClick={() => setAddingToSec(null)} className="mt-6 w-full py-3 bg-slate-100 rounded-lg font-bold text-slate-600 hover:bg-slate-200">취소</button>
+                <div className="mt-8 shrink-0">
+                  <button onClick={() => setAddingToSec(null)} className="w-full py-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors text-lg">취소</button>
+                </div>
               </div>
             </div>
           )}
