@@ -527,11 +527,24 @@
      * 메인 애플리케이션 컴포넌트
      */
     const App = () => {
-      const accounts = {
-        'biz': { pw: '1234', role: 'user', dept: '사업부', name: '사업부 담당자' },
-        'ops': { pw: '1234', role: 'user', dept: '운영부', name: '운영부 담당자' },
-        'admin': { pw: 'admin', role: 'admin', name: '총괄 관리자' }
-      };
+      const defaultAccounts = [
+        { uid: 'u1', id: 'biz', pw: '1234', role: 'user', dept: '사업부', name: '사업부 담당자' },
+        { uid: 'u2', id: 'ops', pw: '1234', role: 'user', dept: '운영부', name: '운영부 담당자' },
+        { uid: 'u3', id: 'admin', pw: 'admin', role: 'admin', name: '총괄 관리자' }
+      ];
+
+      const [accounts, setAccounts] = useState(() => {
+        try {
+          const saved = localStorage.getItem('sbsmentor_accounts');
+          return saved ? JSON.parse(saved) : defaultAccounts;
+        } catch(e) { return defaultAccounts; }
+      });
+
+      useEffect(() => {
+        try { localStorage.setItem('sbsmentor_accounts', JSON.stringify(accounts)); } catch(e){}
+      }, [accounts]);
+      
+      const [showAccountManager, setShowAccountManager] = useState(false);
 
       const [currentUser, setCurrentUser] = useState(() => {
         try { return JSON.parse(localStorage.getItem('currentUser')) || null; }
@@ -586,7 +599,7 @@
 
       const handleLogin = (e) => {
         e.preventDefault();
-        const acc = accounts[loginId];
+        const acc = accounts.find(a => a.id === loginId);
         if (acc && acc.pw === loginPw) {
           setCurrentUser(acc);
           setShowLogin(false);
@@ -775,6 +788,46 @@
               </div>
             </div>
           )}
+
+          {/* 계정 관리 모달 */}
+          {showAccountManager && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-50 p-4 fade-in">
+              <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-md relative">
+                <button onClick={() => setShowAccountManager(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 font-bold text-xl">✕</button>
+                <h3 className="text-xl font-black mb-6 text-slate-800">계정 관리</h3>
+                <div className="flex flex-col gap-4">
+                  {accounts.map(acc => (
+                    <div key={acc.uid} className="p-4 border border-slate-200 rounded-xl bg-slate-50 relative group">
+                      <div className="font-bold text-sm text-slate-600 mb-2">{acc.name} <span className="font-normal text-xs text-slate-400">({acc.role === 'admin' ? '총괄 권한' : acc.dept})</span></div>
+                      <div className="flex gap-2">
+                         <div className="flex-1">
+                           <label className="text-[10px] text-slate-400 font-bold mb-1 block">아이디</label>
+                           <input 
+                             value={acc.id} 
+                             onChange={e => setAccounts(prev => prev.map(a => a.uid === acc.uid ? { ...a, id: e.target.value } : a))}
+                             className="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-500 text-sm bg-white" 
+                             placeholder="아이디" 
+                           />
+                         </div>
+                         <div className="flex-1">
+                           <label className="text-[10px] text-slate-400 font-bold mb-1 block">비밀번호</label>
+                           <input 
+                             value={acc.pw} 
+                             onChange={e => setAccounts(prev => prev.map(a => a.uid === acc.uid ? { ...a, pw: e.target.value } : a))}
+                             className="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:border-indigo-500 text-sm bg-white" 
+                             placeholder="비밀번호" 
+                           />
+                         </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-6">
+                  <button onClick={() => setShowAccountManager(false)} className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition shadow">닫기 및 저장</button>
+                </div>
+              </div>
+            </div>
+          )}
           {/* 사이드바 목차 */}
           <aside className="w-full md:w-64 bg-slate-900 text-white p-5 flex flex-col sticky top-0 md:h-screen overflow-y-auto z-20">
             <h2 className="text-xl font-black mb-6 tracking-wide text-blue-400">INFO GUIDE</h2>
@@ -798,7 +851,12 @@
                 <div className="flex flex-col gap-2">
                   <div className="text-sm font-bold text-slate-300">{currentUser.name}님 환영합니다</div>
                   <div className="text-xs text-slate-500 mb-2">권한: {isAdmin ? '총괄 관리자' : currentDept}</div>
-                  <button onClick={handleLogout} className="py-2 bg-slate-800 text-slate-400 hover:text-white rounded font-bold text-sm transition">로그아웃</button>
+                  <div className="flex gap-2">
+                    <button onClick={handleLogout} className="flex-1 py-2 bg-slate-800 text-slate-400 hover:text-white rounded font-bold text-xs transition">로그아웃</button>
+                    {isAdmin && (
+                      <button onClick={() => setShowAccountManager(true)} className="flex-1 py-2 bg-indigo-600/30 text-indigo-400 hover:text-white hover:bg-indigo-500 rounded font-bold text-xs transition">계정 관리</button>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <button onClick={() => setShowLogin(true)} className="w-full py-3 bg-indigo-600 text-white rounded-lg font-bold text-sm transition hover:bg-indigo-700 shadow-md">
