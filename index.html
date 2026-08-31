@@ -13,6 +13,7 @@
   <!-- 파이어베이스 연동 스크립트 (v10 Compat) -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
   
   <link rel="icon" href="data:,">
   
@@ -463,11 +464,13 @@
       );
     };
 
-        /** [블록] 사진 칸 */
+    /** [블록] 사진 칸 */
     const PhotoBlock = ({ data, onChange, isAdmin }) => {
+      const [isUploading, setIsUploading] = useState(false);
       const handleUpload = (e) => {
         const file = e.target.files[0];
         if(!file) return;
+        setIsUploading(true);
         const reader = new FileReader();
         reader.onload = (event) => {
           const img = new Image();
@@ -486,12 +489,35 @@
             canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-            onChange({...data, imageUrl: canvas.toDataURL('image/jpeg', 0.8)});
+            
+            canvas.toBlob((blob) => {
+              if(!blob) {
+                setIsUploading(false);
+                alert('이미지 처리 중 오류가 발생했습니다.');
+                return;
+              }
+              const fileName = `photos/${Date.now()}_${generateId()}.jpg`;
+              const storageRef = storage.ref().child(fileName);
+              storageRef.put(blob).then((snapshot) => {
+                snapshot.ref.getDownloadURL().then((url) => {
+                  onChange({...data, imageUrl: url});
+                  setIsUploading(false);
+                }).catch(err => {
+                  console.error("URL 가져오기 실패", err);
+                  setIsUploading(false);
+                });
+              }).catch(err => {
+                console.error("업로드 실패", err);
+                setIsUploading(false);
+                alert('업로드 실패: Firebase Storage 설정 및 권한을 확인해주세요.');
+              });
+            }, 'image/jpeg', 0.8);
           };
           img.src = event.target.result;
         };
         reader.readAsDataURL(file);
       };
+      
       return (
         <div className="w-full flex flex-col group/photo relative group/feature">
           {data.imageUrl ? (
@@ -500,8 +526,8 @@
               {isAdmin && (
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
                   <label className="bg-white text-slate-800 px-6 py-3 rounded-xl font-bold cursor-pointer hover:bg-slate-100 shadow-lg">
-                    이미지 변경
-                    <input type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+                    {isUploading ? "업로드 중..." : "이미지 변경"}
+                    <input type="file" accept="image/*" onChange={handleUpload} className="hidden" disabled={isUploading} />
                   </label>
                 </div>
               )}
@@ -509,10 +535,10 @@
           ) : (
             <div className="w-full h-64 bg-slate-50 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center hover:bg-slate-100 transition">
               {isAdmin ? (
-                <label className="text-slate-500 hover:text-indigo-600 font-bold cursor-pointer flex flex-col items-center gap-3 w-full h-full justify-center">
+                <label className={`text-slate-500 hover:text-indigo-600 font-bold cursor-pointer flex flex-col items-center gap-3 w-full h-full justify-center ${isUploading ? 'opacity-50' : ''}`}>
                   <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm text-3xl">📷</div>
-                  <span>클릭하여 이미지 업로드</span>
-                  <input type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+                  <span>{isUploading ? '업로드 중입니다...' : '클릭하여 이미지 업로드'}</span>
+                  <input type="file" accept="image/*" onChange={handleUpload} className="hidden" disabled={isUploading} />
                 </label>
               ) : (
                 <div className="text-slate-400 flex flex-col items-center gap-2">
@@ -565,29 +591,31 @@
       );
     };
 
+    // ==========================================
+    // [파이어베이스 전역 설정] 
+    // ==========================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyC4NVLXsfyDkAZeMoNKqHIEwtwyfn3-35E",
+      authDomain: "guidebook-bf57e.firebaseapp.com",
+      databaseURL: "https://guidebook-bf57e-default-rtdb.firebaseio.com",
+      projectId: "guidebook-bf57e",
+      storageBucket: "guidebook-bf57e.firebasestorage.app",
+      messagingSenderId: "462257373197",
+      appId: "1:462257373197:web:200999b471046ed3a11544",
+      measurementId: "G-MDKCWX7786"
+    };
+    
+    // 앱 초기화 (중복 실행 방지)
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
     /**
      * 메인 애플리케이션 컴포넌트
      */
     const App = () => {
-      // ==========================================
-      // [파이어베이스 설정] 
-      // 이전에 쓰시던 파이어베이스 설정값을 여기에 복사해 넣어주세요.
-      // (기존 주차계산기 때 쓰셨던 DB를 그대로 쓰셔도 무방합니다)
-      // ==========================================
-      const firebaseConfig = {
-        apiKey: "AIzaSyA4wnUKUenPstCDR336jHEU6nGsApUpk1k",
-        authDomain: "guidebook-6e84f.firebaseapp.com",
-        projectId: "guidebook-6e84f",
-        storageBucket: "guidebook-6e84f.firebasestorage.app",
-        messagingSenderId: "750885148762",
-        appId: "1:750885148762:web:a68577d3cd71ea976aa063"
-      };
-      
-      // 앱 초기화 방어 로직 (중복 실행 방지)
-      if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-      }
-      const db = firebase.firestore();
 
       const defaultAccounts = [
         { uid: 'u1', id: 'biz', pw: '1234', role: 'user', dept: '사업부', name: '사업부 담당자' },
@@ -647,18 +675,29 @@
           });
       }, []);
 
-      // [파이어베이스 연동: 데이터 저장하기]
+      // [로컬 백업 유지]
+      // 수정된 내용은 로컬(현재 컴퓨터)에 임시 자동 저장됩니다.
       useEffect(() => {
-        if (isSyncing) return; // 로딩 중 덮어쓰기 방지
-        
-        // 기존 백업 유지
+        if (isSyncing) return;
         try { localStorage.setItem('sbsmentor_multi_data', JSON.stringify(allData)); } catch(e){}
-
-        // 내용이 수정되면 실시간으로 파이어베이스 Firestore에 덮어씁니다.
-        // 이 작업은 1일 무료 쓰기 한도 내에서 매우 안전하게 작동합니다.
-        db.collection("guidebook").doc("mainData").set(allData)
-          .catch(err => console.error("Firebase 저장 실패:", err));
       }, [allData, isSyncing]);
+
+      // [서버 수동 저장 기능]
+      // 관리자가 '서버에 저장' 버튼을 눌렀을 때만 파이어베이스(다른 PC와 공유)에 병합 저장합니다.
+      const handleSaveData = async () => {
+        const currentData = allData[currentDept];
+        if (!currentData) return;
+        
+        try {
+          await db.collection("guidebook").doc("mainData").set({
+            [currentDept]: currentData
+          }, { merge: true });
+          alert(`[${currentDept}] 편집 내용이 서버에 성공적으로 저장되었습니다!\n이제 다른 기기에서도 새로고침하시면 변경된 내용을 볼 수 있습니다.`);
+        } catch (err) {
+          console.error("Firebase 저장 실패:", err);
+          alert("서버 저장에 실패했습니다. 권한이나 설정값을 확인해주세요.");
+        }
+      };
       
       const [currentDept, setCurrentDept] = useState("사업부");
       
@@ -957,14 +996,22 @@
               <div className="mb-10 pb-6 border-b border-slate-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <h1 className="text-3xl font-extrabold text-slate-900">{currentDept} 가이드북</h1>
                 {isAdmin && (
-                  <select 
-                    value={currentDept} 
-                    onChange={e => setCurrentDept(e.target.value)} 
-                    className="p-2 border-2 border-indigo-200 rounded-lg text-indigo-700 font-bold bg-indigo-50 focus:outline-none focus:border-indigo-500 transition"
-                  >
-                    <option value="사업부">사업부 편집모드</option>
-                    <option value="운영부">운영부 편집모드</option>
-                  </select>
+                  <div className="flex items-center gap-3 w-full md:w-auto">
+                    <button 
+                      onClick={handleSaveData} 
+                      className="flex-1 md:flex-none px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-lg shadow-md transition-all flex items-center justify-center gap-2"
+                    >
+                      <span>💾</span> 서버에 저장하기
+                    </button>
+                    <select 
+                      value={currentDept} 
+                      onChange={e => setCurrentDept(e.target.value)} 
+                      className="flex-1 md:flex-none p-2 border-2 border-indigo-200 rounded-lg text-indigo-700 font-bold bg-indigo-50 focus:outline-none focus:border-indigo-500 transition"
+                    >
+                      <option value="사업부">사업부 편집모드</option>
+                      <option value="운영부">운영부 편집모드</option>
+                    </select>
+                  </div>
                 )}
               </div>
 
