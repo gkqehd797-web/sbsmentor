@@ -112,7 +112,7 @@
       }
       return (
         <div className="border border-blue-200 rounded-lg overflow-hidden bg-white shadow-sm focus-within:border-blue-500">
-          <div className="bg-slate-50 p-1 flex flex-wrap gap-1 border-b border-blue-100">
+          <div className="sticky top-0 z-10 bg-slate-50 p-1 flex flex-wrap gap-1 border-b border-blue-100">
             <button type="button" onMouseDown={e => { e.preventDefault(); document.execCommand('bold'); onChange(editorRef.current.innerHTML); }} className="px-2 py-1 bg-white border rounded text-sm hover:bg-slate-100 font-bold">B</button>
             <button type="button" onMouseDown={e => { e.preventDefault(); document.execCommand('italic'); onChange(editorRef.current.innerHTML); }} className="px-2 py-1 bg-white border rounded text-sm hover:bg-slate-100 italic">I</button>
             <button type="button" onMouseDown={e => { e.preventDefault(); document.execCommand('underline'); onChange(editorRef.current.innerHTML); }} className="px-2 py-1 bg-white border rounded text-sm hover:bg-slate-100 underline">U</button>
@@ -133,6 +133,16 @@
             contentEditable={true} 
             onInput={e => onChange(e.currentTarget.innerHTML)} 
             onBlur={e => onChange(e.currentTarget.innerHTML)}
+            onClick={e => {
+              if (e.target.tagName === 'A') {
+                e.preventDefault();
+                if (confirm('해당 링크를 삭제하시겠습니까?')) {
+                  const text = document.createTextNode(e.target.textContent);
+                  e.target.parentNode.replaceChild(text, e.target);
+                  onChange(editorRef.current.innerHTML);
+                }
+              }
+            }}
             className="p-3 min-h-[60px] focus:outline-none rich-text-content" 
             suppressContentEditableWarning={true}
           />
