@@ -26,6 +26,7 @@
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     .rich-text-content ul { list-style-type: disc; padding-left: 1.5rem; }
     .rich-text-content ol { list-style-type: decimal; padding-left: 1.5rem; }
+    .rich-text-content a { color: #2563eb; text-decoration: underline; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -116,6 +117,16 @@
             <button type="button" onMouseDown={e => { e.preventDefault(); document.execCommand('italic'); onChange(editorRef.current.innerHTML); }} className="px-2 py-1 bg-white border rounded text-sm hover:bg-slate-100 italic">I</button>
             <button type="button" onMouseDown={e => { e.preventDefault(); document.execCommand('underline'); onChange(editorRef.current.innerHTML); }} className="px-2 py-1 bg-white border rounded text-sm hover:bg-slate-100 underline">U</button>
             <button type="button" onMouseDown={e => { e.preventDefault(); document.execCommand('insertUnorderedList'); onChange(editorRef.current.innerHTML); }} className="px-2 py-1 bg-white border rounded text-sm hover:bg-slate-100">• List</button>
+            <button type="button" onMouseDown={e => { 
+              e.preventDefault(); 
+              const url = prompt('링크 URL을 입력하세요 (예: https://...):', 'https://');
+              if (url) {
+                document.execCommand('createLink', false, url);
+                const links = editorRef.current.querySelectorAll('a');
+                links.forEach(link => link.setAttribute('target', '_blank'));
+                onChange(editorRef.current.innerHTML);
+              }
+            }} className="px-2 py-1 bg-white border rounded text-sm hover:bg-slate-100">🔗 Link</button>
           </div>
           <div 
             ref={editorRef}
@@ -789,6 +800,18 @@
         setData(prev => ({...prev, sections: prev.sections.filter(s => s.id !== secId)}));
       };
 
+      const swapSection = (index, direction) => {
+        setData(prev => {
+          const newSections = [...prev.sections];
+          if (direction === -1 && index > 0) {
+            [newSections[index - 1], newSections[index]] = [newSections[index], newSections[index - 1]];
+          } else if (direction === 1 && index < newSections.length - 1) {
+            [newSections[index + 1], newSections[index]] = [newSections[index], newSections[index + 1]];
+          }
+          return { ...prev, sections: newSections };
+        });
+      };
+
             // 셀(칸) 및 기능 제어 함수
       const addFeature = (secId, type, targetCellId = null) => {
         let newFeature = { id: generateId(), type };
@@ -991,10 +1014,16 @@
           <aside className="w-full md:w-64 bg-slate-900 text-white p-5 flex flex-col sticky top-0 md:h-screen overflow-y-auto z-20">
             <h2 className="text-xl font-black mb-6 tracking-wide text-blue-400">INFO GUIDE</h2>
             <nav className="flex-1 space-y-1">
-              {data.sections.map(s => (
+              {data.sections.map((s, idx) => (
                 <div key={s.id} className="group relative flex items-center justify-between px-3 py-2 rounded text-slate-300 hover:bg-slate-800 hover:text-white transition font-medium">
                    <a href={`#${s.id}`} className="truncate block flex-1">{s.title.replace(/<[^>]+>/g, '') || "제목 없음"}</a>
-                   {isAdmin && <button onClick={() => removeSection(s.id)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-500 ml-2 font-bold px-1">✕</button>}
+                   {isAdmin && (
+                     <div className="opacity-0 group-hover:opacity-100 flex items-center shrink-0 ml-2">
+                       <button onClick={() => swapSection(idx, -1)} className="text-slate-400 hover:text-white px-1 text-xs" title="위로 이동">▲</button>
+                       <button onClick={() => swapSection(idx, 1)} className="text-slate-400 hover:text-white px-1 text-xs" title="아래로 이동">▼</button>
+                       <button onClick={() => removeSection(s.id)} className="text-red-400 hover:text-red-500 font-bold px-1 ml-1" title="삭제">✕</button>
+                     </div>
+                   )}
                 </div>
               ))}
               {isAdmin && (
