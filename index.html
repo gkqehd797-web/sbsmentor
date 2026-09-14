@@ -702,6 +702,7 @@
       const [loginId, setLoginId] = useState('');
       const [loginPw, setLoginPw] = useState('');
       const [showLogin, setShowLogin] = useState(false);
+      const [showOpsLogin, setShowOpsLogin] = useState(false);
       
       const [allData, setAllData] = useState(() => {
         try {
@@ -962,6 +963,31 @@
 
       return (
         <div className="min-h-screen flex flex-col md:flex-row text-slate-800">
+          {/* 운영부 전용 접속 모달 */}
+          {showOpsLogin && (
+            <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4 fade-in">
+              <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-sm relative text-center">
+                <button onClick={() => setShowOpsLogin(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 font-bold text-xl">✕</button>
+                <h3 className="text-xl font-black mb-6 text-slate-800">운영부 접속</h3>
+                <p className="text-slate-600 mb-6 font-medium text-sm">운영부 권한으로 접속하시겠습니까?</p>
+                <button 
+                  onClick={() => {
+                    const opsAcc = accounts.find(a => a.id === 'ops');
+                    if (opsAcc) {
+                      setCurrentUser(opsAcc);
+                      setCurrentDept("운영부");
+                      try { localStorage.setItem('currentUser', JSON.stringify(opsAcc)); } catch(e){}
+                    }
+                    setShowOpsLogin(false);
+                  }}
+                  className="w-full py-3 px-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition shadow"
+                >
+                  접속하기
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* 로그인 모달 */}
           {showLogin && (
             <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4 fade-in">
@@ -1037,13 +1063,10 @@
               </button>
               <button 
                 onClick={() => {
-                  setCurrentDept("운영부");
                   if (!currentUser || currentUser.role !== 'admin') {
-                    const opsAcc = accounts.find(a => a.id === 'ops');
-                    if (opsAcc) {
-                      setCurrentUser(opsAcc);
-                      try { localStorage.setItem('currentUser', JSON.stringify(opsAcc)); } catch(e){}
-                    }
+                    setShowOpsLogin(true);
+                  } else {
+                    setCurrentDept("운영부");
                   }
                 }}
                 className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${currentDept === '운영부' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
